@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArcDark | 机密暗盘撮合引擎演示</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
+            color: #f8fafc;
+        }
+
+        .mono { font-family: 'JetBrains+Mono', monospace; }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        @keyframes scan {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .scanner-line {
+            width: 50%;
+            height: 2px;
+            background: linear-gradient(to right, rgba(59, 130, 246, 0), rgba(59, 130, 246, 0.8));
+            transform-origin: 100% 50%;
+            animation: scan 4s linear infinite;
+        }
+
+        .match-success-glow {
+            animation: success-glow 1.5s ease-out;
+        }
+
+        @keyframes success-glow {
+            0% { box-shadow: 0 0 0px rgba(34, 197, 94, 0); }
+            50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.4); border-color: rgba(34, 197, 94, 0.6); }
+            100% { box-shadow: 0 0 0px rgba(34, 197, 94, 0); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        
+        /* 针对禁用的按钮样式优化 */
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+            filter: grayscale(0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-12 px-4">
+
+    <!-- Header -->
+    <header class="w-full max-w-5xl flex justify-between items-center mb-10">
+        <div class="flex items-center gap-4">
+            <div class="bg-indigo-600 p-2.5 rounded-2xl shadow-xl shadow-indigo-500/20">
+                <i class="fas fa-eye-slash text-white text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter text-white">ArcDark <span class="text-indigo-500 font-normal mono text-sm ml-1">v1.2</span></h1>
+                <p class="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">Confidential Matching Engine</p>
+            </div>
+        </div>
+        <div class="flex flex-col items-end text-right">
+            <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Infrastructure Status</span>
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span class="text-xs font-bold text-slate-300">Arcium Devnet Active</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+        
+        <!-- Left: Order Placement & Logic State -->
+        <div class="lg:col-span-4 space-y-6">
+            
+            <!-- Order Book State -->
+            <div class="glass-panel rounded-3xl p-6 border-l-4 border-indigo-500">
+                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">暗盘密文状态 (MXE State)</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-indigo-400 font-bold uppercase">Best Bid (Max)</span>
+                        <span id="stateBid" class="mono text-white text-sm font-bold">0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-red-400 font-bold uppercase">Best Ask (Min)</span>
+                        <span id="stateAsk" class="mono text-white text-sm font-bold">∞</span>
+                    </div>
+                </div>
+                <p class="text-[9px] text-slate-600 mt-3 italic text-center font-medium">撮合条件: 最高买价 ≥ 最低卖价</p>
+            </div>
+
+            <!-- Input Form -->
+            <div class="glass-panel rounded-3xl p-8 space-y-6 shadow-2xl">
+                <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-file-signature text-indigo-500"></i> Place Shielded Order
+                </h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-2 uppercase font-black tracking-tighter">Trade Side</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="buySideBtn" class="py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs bg-indigo-500/10 text-indigo-400 border-indigo-500/50">BUY (BID)</button>
+                            <button id="sellSideBtn" class="py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs border-slate-800 text-slate-500 hover:border-slate-700">SELL (ASK)</button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-2 uppercase font-black tracking-tighter">Limit Price (SOL)</label>
+                        <input type="number" id="priceInput" value="150.00" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-4 text-lg focus:border-indigo-500 outline-none transition mono text-white">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-2 uppercase font-black tracking-tighter">Order Volume</label>
+                        <input type="number" id="volumeInput" value="10" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition mono text-white">
+                    </div>
+
+                    <!-- 改进后的按钮 -->
+                    <button id="submitBtn" class="w-full bg-white text-slate-950 font-black py-4 rounded-xl hover:bg-indigo-50 transition active:scale-[0.95] flex items-center justify-center gap-2 mt-2 shadow-xl disabled:opacity-50">
+                        <i class="fas fa-lock" id="btnIcon"></i> <span id="btnText">SUBMIT TO MXE</span>
+                    </button>
+                    
+                    <button id="resetStateBtn" onclick="resetOrderBook()" class="w-full text-[9px] text-slate-600 hover:text-slate-400 transition uppercase tracking-widest font-bold disabled:opacity-20">
+                        Reset Order Book State
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Visualization Center -->
+        <div class="lg:col-span-8 space-y-6 flex flex-col">
+            <div id="mainDisplay" class="glass-panel rounded-3xl p-8 flex-1 flex flex-col relative overflow-hidden min-h-[500px] transition-all duration-500">
+                
+                <!-- Radar Background -->
+                <div id="radarContainer" class="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                    <div class="w-[400px] h-[400px] rounded-full border border-indigo-500/30 relative flex items-center justify-center">
+                        <div class="w-3/4 h-3/4 rounded-full border border-indigo-500/20 flex items-center justify-center">
+                            <div class="w-1/2 h-1/2 rounded-full border border-indigo-500/10"></div>
+                        </div>
+                        <div class="scanner-line"></div>
+                    </div>
+                </div>
+
+                <!-- Content Area: Idle -->
+                <div id="idleState" class="flex-1 flex flex-col items-center justify-center text-center space-y-4 z-10">
+                    <div class="w-20 h-20 bg-slate-900/50 rounded-full flex items-center justify-center mb-2 border border-slate-800 shadow-inner">
+                        <i class="fas fa-satellite-dish text-indigo-500 text-2xl"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-300">暗盘实时监控中</h3>
+                    <div class="space-y-1">
+                        <p class="text-xs text-slate-600">Arcium 集群正在维护加密订单簿状态</p>
+                        <p class="text-[10px] text-indigo-400/60 font-mono uppercase tracking-widest">Encrypted Storage Active @ DEMPE...o9WSi</p>
+                    </div>
+                </div>
+
+                <!-- Content Area: Computing -->
+                <div id="computingState" class="hidden flex-1 flex flex-col items-center justify-center space-y-10 z-10 text-center">
+                    <div class="flex items-center gap-6 justify-center">
+                        <div class="w-16 h-16 bg-indigo-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-500/40 animate-pulse text-white text-3xl">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <div class="flex flex-col items-center gap-1">
+                            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Comparing</span>
+                            <div class="h-[2px] w-32 bg-gradient-to-r from-indigo-500 via-white to-slate-800"></div>
+                            <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest mono text-nowrap">SharedEncryptedStructs</span>
+                        </div>
+                        <div class="w-16 h-16 bg-slate-800 rounded-2xl border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-2xl">
+                            <i class="fas fa-shield-halved"></i>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <h3 class="font-black text-indigo-400 uppercase tracking-[0.3em] text-sm animate-pulse">MXE 同态计算引擎处理中...</h3>
+                        <div class="bg-slate-950/80 px-8 py-3 rounded-full border border-slate-800 max-w-sm mx-auto shadow-inner">
+                            <p class="text-[10px] font-mono text-blue-300 tracking-wider" id="statusLog">Lifting input to ArcisType...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Area: Result -->
+                <div id="resultState" class="hidden flex-1 flex flex-col z-10 animate-in fade-in zoom-in duration-500">
+                    <div id="resultHeader" class="flex items-center gap-3 mb-8">
+                        <div id="resultIcon" class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h3 id="resultTitle" class="text-xs font-black uppercase tracking-[0.2em]">--</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 shadow-xl">
+                            <p class="text-[10px] text-slate-500 mb-1 uppercase tracking-widest font-black">结算价格 (Final Price)</p>
+                            <p class="text-4xl font-black text-white mono" id="resPrice">--</p>
+                        </div>
+                        <div class="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 shadow-xl">
+                            <p class="text-[10px] text-slate-500 mb-1 uppercase tracking-widest font-black">成交数量</p>
+                            <p class="text-4xl font-black text-white mono" id="resVol">--</p>
+                        </div>
+                        <div class="col-span-2 bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10 flex justify-between items-center">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Atomic Threshold Commitment</span>
+                                <span class="text-[10px] text-slate-600 mono mt-1">SIG: DEMPE...o9WSi | STATUS: MATCH_SUCCESS</span>
+                            </div>
+                            <i class="fas fa-file-signature text-slate-700 text-2xl"></i>
+                        </div>
+                    </div>
+                    
+                    <button onclick="resetDemoUI()" class="mt-auto mx-auto text-[10px] text-slate-500 hover:text-white transition uppercase tracking-[0.4em] font-black border-b border-transparent hover:border-white pb-1">
+                        返回监控面板
+                    </button>
+                </div>
+
+                <!-- Bottom Logs Area -->
+                <div class="mt-8 pt-8 border-t border-slate-800/50">
+                    <div class="flex justify-between items-center mb-4 px-1">
+                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Network Telemetry</span>
+                        <span class="text-[9px] mono text-slate-600">Arcium Cluster: 456</span>
+                    </div>
+                    <div id="liveLogs" class="space-y-2 h-24 overflow-y-auto custom-scrollbar mono text-[10px] px-1">
+                        <!-- Logs inject here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="mt-12 text-slate-700 text-[10px] uppercase tracking-[0.5em] font-black">
+        ArcDark Stateful Matching Protocol &copy; 2026
+    </footer>
+
+    <script>
+        // --- State Management ---
+        let currentSide = 'BUY';
+        let highestBid = 0.00;
+        let lowestAsk = Infinity;
+        let isProcessing = false;
+
+        // DOM Selectors
+        const buySideBtn = document.getElementById('buySideBtn');
+        const sellSideBtn = document.getElementById('sellSideBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const btnIcon = document.getElementById('btnIcon');
+        const resetStateBtn = document.getElementById('resetStateBtn');
+        
+        const priceInput = document.getElementById('priceInput');
+        const volumeInput = document.getElementById('volumeInput');
+        
+        const stateBidDisp = document.getElementById('stateBid');
+        const stateAskDisp = document.getElementById('stateAsk');
+        
+        const mainDisplay = document.getElementById('mainDisplay');
+        const idleState = document.getElementById('idleState');
+        const computingState = document.getElementById('computingState');
+        const resultState = document.getElementById('resultState');
+        
+        const statusLog = document.getElementById('statusLog');
+        const liveLogs = document.getElementById('liveLogs');
+        const resPrice = document.getElementById('resPrice');
+        const resVol = document.getElementById('resVol');
+        
+        const resultIcon = document.getElementById('resultIcon');
+        const resultTitle = document.getElementById('resultTitle');
+
+        // Side Toggle
+        buySideBtn.addEventListener('click', () => {
+            if (isProcessing) return;
+            currentSide = 'BUY';
+            buySideBtn.className = "py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs bg-indigo-500/10 text-indigo-400 border-indigo-500/50";
+            sellSideBtn.className = "py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs border-slate-800 text-slate-500 hover:border-slate-700";
+            addLiveLog("Trade intent: BUY (Bid Maximization Mode)", "text-indigo-400");
+        });
+
+        sellSideBtn.addEventListener('click', () => {
+            if (isProcessing) return;
+            currentSide = 'SELL';
+            sellSideBtn.className = "py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs bg-red-500/10 text-red-400 border-red-500/50";
+            buySideBtn.className = "py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs border-slate-800 text-slate-500 hover:border-slate-700";
+            addLiveLog("Trade intent: SELL (Ask Minimization Mode)", "text-red-400");
+        });
+
+        const logs = [
+            "Sharding entropy for x25519 session...",
+            "Lifting plaintext inputs to SharedEncryptedStruct...",
+            "Syncing encrypted order book state...",
+            "Executing match_orders.match() circuit...",
+            "Evaluating if HighestBid >= LowestAsk...",
+            "Applying atomic threshold commitment...",
+            "Broadcasting final outcome to Solana ledger..."
+        ];
+
+        function addLiveLog(text, color = 'text-slate-500') {
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const logEntry = document.createElement('div');
+            logEntry.className = `${color} border-l-2 border-transparent pl-2 hover:border-slate-700 transition-all`;
+            logEntry.innerHTML = `<span class="text-slate-700 mr-2">[${time}]</span> ${text}`;
+            liveLogs.prepend(logEntry);
+        }
+
+        submitBtn.addEventListener('click', () => {
+            const userPrice = parseFloat(priceInput.value);
+            const userVol = parseFloat(volumeInput.value);
+
+            if (isNaN(userPrice) || userPrice <= 0 || isProcessing) return;
+
+            // --- LOCK ALL INPUTS ---
+            isProcessing = true;
+            submitBtn.disabled = true;
+            resetStateBtn.disabled = true;
+            buySideBtn.disabled = true;
+            sellSideBtn.disabled = true;
+            priceInput.disabled = true;
+            volumeInput.disabled = true;
+            
+            btnText.innerText = "FHE PROCESSING...";
+            btnIcon.className = "fas fa-spinner fa-spin";
+
+            idleState.classList.add('hidden');
+            resultState.classList.add('hidden');
+            computingState.classList.remove('hidden');
+            mainDisplay.classList.remove('match-success-glow');
+
+            addLiveLog(`Initiating FHE Cycle: ${currentSide} ${userVol} units @ ${userPrice.toFixed(2)}`, 'text-indigo-400');
+
+            let logIndex = 0;
+            const logInterval = setInterval(() => {
+                statusLog.innerText = logs[logIndex];
+                addLiveLog(`[MXE] ${logs[logIndex]}`);
+                logIndex++;
+                if(logIndex >= logs.length) clearInterval(logInterval);
+            }, 600);
+
+            setTimeout(() => {
+                computingState.classList.add('hidden');
+                resultState.classList.remove('hidden');
+                
+                // --- CORE LOGIC: Update Stateful Order Book ---
+                if (currentSide === 'BUY') {
+                    if (userPrice > highestBid) highestBid = userPrice;
+                } else {
+                    if (userPrice < lowestAsk) lowestAsk = userPrice;
+                }
+
+                stateBidDisp.innerText = highestBid.toFixed(2);
+                stateAskDisp.innerText = lowestAsk === Infinity ? "∞" : lowestAsk.toFixed(2);
+
+                const isMatched = highestBid >= lowestAsk;
+
+                if (isMatched) {
+                    mainDisplay.classList.add('match-success-glow');
+                    resultIcon.className = "w-10 h-10 rounded-xl flex items-center justify-center bg-green-500 text-white shadow-xl shadow-green-500/30";
+                    resultTitle.innerText = "撮合成功: 订单已原子结算";
+                    resultTitle.className = "text-xs font-black uppercase tracking-[0.2em] text-green-400";
+                    
+                    resPrice.innerText = userPrice.toFixed(2);
+                    resVol.innerText = userVol;
+                    
+                    addLiveLog(`🎉 [ALERT] MATCH FOUND: ${highestBid.toFixed(2)} >= ${lowestAsk.toFixed(2)}. Settled.`, "text-green-500 font-black");
+                    
+                    highestBid = 0;
+                    lowestAsk = Infinity;
+                } else {
+                    resultIcon.className = "w-10 h-10 rounded-xl flex items-center justify-center bg-slate-800 text-slate-500 border border-slate-700";
+                    resultTitle.innerText = "未触发撮合: 加密状态已更新";
+                    resultTitle.className = "text-xs font-bold uppercase tracking-[0.2em] text-slate-400";
+                    
+                    resPrice.innerText = "QUEUED";
+                    resVol.innerText = "POOLED";
+                    
+                    addLiveLog("NOTICE: Price threshold not met. Encrypted state stored in MXE memory.", "text-amber-500/80");
+                }
+                
+                // --- UNLOCK AFTER DELAY ---
+                setTimeout(() => {
+                    isProcessing = false;
+                    submitBtn.disabled = false;
+                    resetStateBtn.disabled = false;
+                    buySideBtn.disabled = false;
+                    sellSideBtn.disabled = false;
+                    priceInput.disabled = false;
+                    volumeInput.disabled = false;
+                    btnText.innerText = "SUBMIT TO MXE";
+                    btnIcon.className = "fas fa-lock";
+                }, 500);
+
+            }, 4500);
+        });
+
+        function resetOrderBook() {
+            if (isProcessing) return;
+            highestBid = 0;
+            lowestAsk = Infinity;
+            stateBidDisp.innerText = "0.00";
+            stateAskDisp.innerText = "∞";
+            addLiveLog("CRITICAL: Order book state manually cleared by authority.", "text-red-400 font-bold");
+        }
+
+        function resetDemoUI() {
+            resultState.classList.add('hidden');
+            idleState.classList.remove('hidden');
+            mainDisplay.classList.remove('match-success-glow');
+            stateBidDisp.innerText = highestBid.toFixed(2);
+            stateAskDisp.innerText = lowestAsk === Infinity ? "∞" : lowestAsk.toFixed(2);
+        }
+
+        addLiveLog("ArcDark Stateful Matching Engine v1.2 Active.");
+        addLiveLog("Waiting for encrypted input packets...");
+    </script>
+</body>
+</html>
