@@ -10,6 +10,10 @@ In traditional decentralized exchanges (DEXs), order visibility leads to toxic M
 
 The protocol is fully operational and verified on the Arcium Devnet.
 
+### 🖥️ Interactive Demo
+
+[Launch ArcBio Terminal](https://silent-builder-x.github.io/ArcDark/)
+
 ## 🧠 Core Innovation: The "Invisible Hand"
 
 ArcDark utilizes Arcis MPC circuits to implement a **Confidential Matching Engine**:
