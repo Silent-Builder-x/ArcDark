@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-arcdark = "BrwrywS88APv6LmBkniYNgcFMq9fYKXnqD2ZUW9HcPUf"
+test = "FubDB3faXRkULZzKYFpBBmmckS1ToNbpBmFDmdQ6nb4P"
 
 [registry]
 url = "https://api.apr.dev"
