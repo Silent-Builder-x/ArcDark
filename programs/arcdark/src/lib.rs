@@ -14,8 +14,8 @@ pub mod arcdark {
         Ok(())
     }
 
-    /// [新增] 挂单 (Place Order)
-    /// 用户创建一个持久化的链上订单账户，存储加密后的意图
+    /// [New] Place Order
+    /// Users create a persistent on-chain order account to store encrypted intentions
     pub fn place_order(
         ctx: Context<PlaceOrder>,
         encrypted_data: [[u8; 32]; 4], // [Price, Volume, Side, MinFill]
@@ -30,29 +30,29 @@ pub mod arcdark {
         Ok(())
     }
 
-    /// [升级] 执行撮合 (Execute Match)
-    /// 传入两个链上订单账户 (Maker, Taker) 进行原子匹配
+    /// [Upgrade] Execute Match
+    /// Pass in two on-chain order accounts (Maker, Taker) for atomic matching
     pub fn execute_match(
         ctx: Context<ExecuteMatch>,
         computation_offset: u64,
-        pubkey: [u8; 32], // 结果重加密公钥
+        pubkey: [u8; 32], // Result re-encryption public key
         nonce: u128,
     ) -> Result<()> {
         let accounts = &mut ctx.accounts.computation;
         accounts.sign_pda_account.bump = ctx.bumps.computation.sign_pda_account;
         
-        // 构建 MPC 参数
-        // 严格对应电路输入: fn execute_dark_match(maker, taker)
+        // Build MPC parameters
+        // Strictly corresponds to circuit input: fn execute_dark_match(maker, taker)
         let mut builder = ArgBuilder::new()
             .x25519_pubkey(pubkey)
             .plaintext_u128(nonce);
 
-        // 1. 读取 Maker 订单加密数据
+        // 1. Read Maker order encrypted data
         for shard in &ctx.accounts.maker_order.encrypted_data {
             builder = builder.encrypted_u64(*shard);
         }
 
-        // 2. 读取 Taker 订单加密数据
+        // 2. Read Taker order encrypted data
         for shard in &ctx.accounts.taker_order.encrypted_data {
             builder = builder.encrypted_u64(*shard);
         }
@@ -86,20 +86,20 @@ pub mod arcdark {
             Err(_) => return Err(ErrorCode::AbortedComputation.into()),
         };
 
-        // 解析结果: { is_executed, exec_price, exec_volume }
+        // Parse result: { is_executed, exec_price, exec_volume }
         let status_bytes: [u8; 8] = o.ciphertexts[0][0..8].try_into().unwrap();
         let is_executed = u64::from_le_bytes(status_bytes) == 1;
 
         if is_executed {
             msg!("✅ TRADE EXECUTED via Dark Pool!");
-            // 在真实场景中，这里会标记订单为 Closed 或更新余额
-            // 由于 MPC 输出是加密的，这里仅通过 Event 通知链下 Relayer 进行结算
+            // In real scenarios, this would mark the order as Closed or update balances
+            // Since MPC output is encrypted, this only notifies the off-chain Relayer via Event for settlement
         } else {
             msg!("⚠️ Match Failed: Conditions not met.");
         }
 
         emit!(TradeEvent {
-            maker_order: ctx.accounts.computation_account.key(), // 简化，实际需传参
+            maker_order: ctx.accounts.computation_account.key(), // Simplified, actual implementation requires parameters
             success: is_executed,
             timestamp: Clock::get()?.unix_timestamp,
         });
@@ -119,7 +119,7 @@ pub struct PlaceOrder<'info> {
         payer = owner,
         // Space: Disc(8) + Owner(32) + Data(4*32=128) + Bool(1) + Bump(1)
         space = 8 + 32 + 128 + 1 + 1,
-        seeds = [b"order", owner.key().as_ref(), &Clock::get()?.unix_timestamp.to_le_bytes()[0..4]], // 简单随机种子
+        seeds = [b"order", owner.key().as_ref(), &Clock::get()?.unix_timestamp.to_le_bytes()[0..4]], // Simple random seed
         bump
     )]
     pub order: Account<'info, DarkOrder>,
@@ -139,7 +139,7 @@ pub struct DarkOrder {
 pub struct ExecuteMatch<'info> {
     pub computation: ExecuteMatchBase<'info>,
     
-    // 传入两个订单账户
+    // Pass in two order accounts
     #[account(constraint = maker_order.is_active)]
     pub maker_order: Account<'info, DarkOrder>,
     #[account(constraint = taker_order.is_active)]

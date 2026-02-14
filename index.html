@@ -50,7 +50,6 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         
-        /* 针对禁用的按钮样式优化 */
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed !important;
@@ -68,7 +67,7 @@
             </div>
             <div>
                 <h1 class="text-2xl font-black tracking-tighter text-white">ArcDark <span class="text-indigo-500 font-normal mono text-sm ml-1">v1.2</span></h1>
-                <p class="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">Confidential Matching Engine</p>
+                <p class="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">Confidential MPC Engine</p>
             </div>
         </div>
         <div class="flex flex-col items-end text-right">
@@ -126,7 +125,6 @@
                         <input type="number" id="volumeInput" value="10" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition mono text-white">
                     </div>
 
-                    <!-- 改进后的按钮 -->
                     <button id="submitBtn" class="w-full bg-white text-slate-950 font-black py-4 rounded-xl hover:bg-indigo-50 transition active:scale-[0.95] flex items-center justify-center gap-2 mt-2 shadow-xl disabled:opacity-50">
                         <i class="fas fa-lock" id="btnIcon"></i> <span id="btnText">SUBMIT TO MXE</span>
                     </button>
@@ -160,7 +158,7 @@
                     <h3 class="font-bold text-slate-300">暗盘实时监控中</h3>
                     <div class="space-y-1">
                         <p class="text-xs text-slate-600">Arcium 集群正在维护加密订单簿状态</p>
-                        <p class="text-[10px] text-indigo-400/60 font-mono uppercase tracking-widest">Encrypted Storage Active @ DEMPE...o9WSi</p>
+                        <p class="text-[10px] text-indigo-400/60 font-mono uppercase tracking-widest">MPC Storage Active @ DEMPE...o9WSi</p>
                     </div>
                 </div>
 
@@ -173,16 +171,16 @@
                         <div class="flex flex-col items-center gap-1">
                             <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Comparing</span>
                             <div class="h-[2px] w-32 bg-gradient-to-r from-indigo-500 via-white to-slate-800"></div>
-                            <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest mono text-nowrap">SharedEncryptedStructs</span>
+                            <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest mono text-nowrap">Secret Shares</span>
                         </div>
                         <div class="w-16 h-16 bg-slate-800 rounded-2xl border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-2xl">
                             <i class="fas fa-shield-halved"></i>
                         </div>
                     </div>
                     <div class="space-y-4">
-                        <h3 class="font-black text-indigo-400 uppercase tracking-[0.3em] text-sm animate-pulse">MXE 同态计算引擎处理中...</h3>
+                        <h3 class="font-black text-indigo-400 uppercase tracking-[0.3em] text-sm animate-pulse">MXE 多方计算引擎处理中...</h3>
                         <div class="bg-slate-950/80 px-8 py-3 rounded-full border border-slate-800 max-w-sm mx-auto shadow-inner">
-                            <p class="text-[10px] font-mono text-blue-300 tracking-wider" id="statusLog">Lifting input to ArcisType...</p>
+                            <p class="text-[10px] font-mono text-blue-300 tracking-wider" id="statusLog">Distributing Secret Shares...</p>
                         </div>
                     </div>
                 </div>
@@ -207,7 +205,7 @@
                         </div>
                         <div class="col-span-2 bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10 flex justify-between items-center">
                             <div class="flex flex-col">
-                                <span class="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Atomic Threshold Commitment</span>
+                                <span class="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Atomic MPC Commitment</span>
                                 <span class="text-[10px] text-slate-600 mono mt-1">SIG: DEMPE...o9WSi | STATUS: MATCH_SUCCESS</span>
                             </div>
                             <i class="fas fa-file-signature text-slate-700 text-2xl"></i>
@@ -289,9 +287,9 @@
         });
 
         const logs = [
-            "Sharding entropy for x25519 session...",
-            "Lifting plaintext inputs to SharedEncryptedStruct...",
-            "Syncing encrypted order book state...",
+            "Generating Secret Shares for order...",
+            "Submitting Shares to MXE nodes...",
+            "Syncing oblivious order book state...",
             "Executing match_orders.match() circuit...",
             "Evaluating if HighestBid >= LowestAsk...",
             "Applying atomic threshold commitment...",
@@ -321,7 +319,7 @@
             priceInput.disabled = true;
             volumeInput.disabled = true;
             
-            btnText.innerText = "FHE PROCESSING...";
+            btnText.innerText = "MPC PROCESSING...";
             btnIcon.className = "fas fa-spinner fa-spin";
 
             idleState.classList.add('hidden');
@@ -329,7 +327,7 @@
             computingState.classList.remove('hidden');
             mainDisplay.classList.remove('match-success-glow');
 
-            addLiveLog(`Initiating FHE Cycle: ${currentSide} ${userVol} units @ ${userPrice.toFixed(2)}`, 'text-indigo-400');
+            addLiveLog(`Initiating MPC Cycle: ${currentSide} ${userVol} units @ ${userPrice.toFixed(2)}`, 'text-indigo-400');
 
             let logIndex = 0;
             const logInterval = setInterval(() => {
@@ -370,7 +368,7 @@
                     lowestAsk = Infinity;
                 } else {
                     resultIcon.className = "w-10 h-10 rounded-xl flex items-center justify-center bg-slate-800 text-slate-500 border border-slate-700";
-                    resultTitle.innerText = "未触发撮合: 加密状态已更新";
+                    resultTitle.innerText = "未触发撮合: 状态已更新";
                     resultTitle.className = "text-xs font-bold uppercase tracking-[0.2em] text-slate-400";
                     
                     resPrice.innerText = "QUEUED";
@@ -412,8 +410,8 @@
             stateAskDisp.innerText = lowestAsk === Infinity ? "∞" : lowestAsk.toFixed(2);
         }
 
-        addLiveLog("ArcDark Stateful Matching Engine v1.2 Active.");
-        addLiveLog("Waiting for encrypted input packets...");
+        addLiveLog("ArcDark MPC Matching Engine v1.2 Active.");
+        addLiveLog("Waiting for secret-shared input packets...");
     </script>
 </body>
 </html>
