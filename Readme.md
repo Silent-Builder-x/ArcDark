@@ -12,7 +12,7 @@ The protocol is fully operational and verified on the Arcium Devnet.
 
 ### 🖥️ Interactive Demo
 
-[Launch ArcBio Terminal](https://silent-builder-x.github.io/ArcDark/)
+[Launch ArcDark Terminal](https://silent-builder-x.github.io/ArcDark/)
 
 ## 🧠 Core Innovation: The "Invisible Hand"
 
