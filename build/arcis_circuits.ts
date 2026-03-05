@@ -2,5 +2,5 @@
 // Schema version: 1
 import { createPacker } from '@arcium-hq/client';
 
-export const dark_pool = {
+export const arcis_circuits = {
 } as const;

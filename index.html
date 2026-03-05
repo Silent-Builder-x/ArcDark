@@ -1,417 +1,477 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArcDark | 机密暗盘撮合引擎演示</title>
+    <title>ArcDark | Institutional Dark Pool Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
         
         body {
             font-family: 'Inter', sans-serif;
             background-color: #020617;
             color: #f8fafc;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(79, 70, 229, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(147, 51, 234, 0.05) 0%, transparent 50%);
         }
 
         .mono { font-family: 'JetBrains+Mono', monospace; }
 
         .glass-panel {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(51, 65, 85, 0.5);
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(51, 65, 85, 0.4);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
         }
 
+        /* Radar Scanner Effect */
         @keyframes scan {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
-
         .scanner-line {
             width: 50%;
             height: 2px;
-            background: linear-gradient(to right, rgba(59, 130, 246, 0), rgba(59, 130, 246, 0.8));
+            background: linear-gradient(to right, transparent, rgba(99, 102, 241, 1));
             transform-origin: 100% 50%;
-            animation: scan 4s linear infinite;
+            animation: scan 3s linear infinite;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.8);
+        }
+
+        /* Matrix/Encryption Scramble Effect */
+        .scramble-text {
+            color: #4ade80; /* matrix green */
+            text-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
         }
 
         .match-success-glow {
-            animation: success-glow 1.5s ease-out;
+            animation: success-glow 2s ease-out;
         }
 
         @keyframes success-glow {
             0% { box-shadow: 0 0 0px rgba(34, 197, 94, 0); }
-            50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.4); border-color: rgba(34, 197, 94, 0.6); }
-            100% { box-shadow: 0 0 0px rgba(34, 197, 94, 0); }
+            30% { box-shadow: 0 0 50px rgba(34, 197, 94, 0.3); border-color: rgba(34, 197, 94, 0.5); }
+            100% { box-shadow: 0 0 0px rgba(34, 197, 94, 0); border-color: rgba(51, 65, 85, 0.4); }
         }
 
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed !important;
-            filter: grayscale(0.5);
+            transform: scale(1) !important;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center py-12 px-4">
+<body class="min-h-screen flex flex-col items-center py-8 px-4 sm:px-8">
 
     <!-- Header -->
-    <header class="w-full max-w-5xl flex justify-between items-center mb-10">
+    <header class="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
         <div class="flex items-center gap-4">
-            <div class="bg-indigo-600 p-2.5 rounded-2xl shadow-xl shadow-indigo-500/20">
+            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-2xl shadow-xl shadow-indigo-500/20 border border-indigo-400/30">
                 <i class="fas fa-eye-slash text-white text-2xl"></i>
             </div>
             <div>
-                <h1 class="text-2xl font-black tracking-tighter text-white">ArcDark <span class="text-indigo-500 font-normal mono text-sm ml-1">v1.2</span></h1>
-                <p class="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">Confidential MPC Engine</p>
+                <h1 class="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">ArcDark <span class="text-indigo-400 font-bold mono text-sm ml-1 border border-indigo-500/30 px-2 py-0.5 rounded-md bg-indigo-500/10">v1.0-alpha</span></h1>
+                <p class="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-bold mt-1">Zero-Knowledge OTC Execution</p>
             </div>
         </div>
-        <div class="flex flex-col items-end text-right">
-            <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Infrastructure Status</span>
-            <div class="flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <span class="text-xs font-bold text-slate-300">Arcium Devnet Active</span>
+        <div class="flex items-center gap-6">
+            <div class="flex flex-col items-end text-right hidden sm:flex">
+                <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Network</span>
+                <div class="flex items-center gap-2 mt-0.5">
+                    <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e] animate-pulse"></span>
+                    <span class="text-xs font-bold text-slate-300 mono">Arcium Cluster 456</span>
+                </div>
             </div>
+            <button class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-bold py-2 px-4 rounded-xl transition flex items-center gap-2">
+                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-purple-400 to-blue-500"></div>
+                0x7A...9F2
+            </button>
         </div>
     </header>
 
-    <main class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+    <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
-        <!-- Left: Order Placement & Logic State -->
+        <!-- Left Column: Intent Input -->
         <div class="lg:col-span-4 space-y-6">
             
-            <!-- Order Book State -->
-            <div class="glass-panel rounded-3xl p-6 border-l-4 border-indigo-500">
-                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">暗盘密文状态 (MXE State)</h3>
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                        <span class="text-[10px] text-indigo-400 font-bold uppercase">Best Bid (Max)</span>
-                        <span id="stateBid" class="mono text-white text-sm font-bold">0.00</span>
+            <!-- Global Encrypted State -->
+            <div class="glass-panel rounded-3xl p-6 border-t-4 border-indigo-500 relative overflow-hidden group">
+                <div class="absolute inset-0 bg-indigo-500/5 group-hover:bg-indigo-500/10 transition duration-500"></div>
+                <div class="flex justify-between items-center mb-4 relative z-10">
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Global Encrypted Pool</h3>
+                    <i class="fas fa-lock text-indigo-400"></i>
+                </div>
+                <div class="space-y-2 relative z-10">
+                    <div class="flex justify-between items-center bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Token A Reserve</span>
+                        <span class="mono text-indigo-300 text-xs blur-[3px] select-none transition hover:blur-none cursor-pointer" title="Ciphertext: 0x8f2a...99b">*********</span>
                     </div>
-                    <div class="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                        <span class="text-[10px] text-red-400 font-bold uppercase">Best Ask (Min)</span>
-                        <span id="stateAsk" class="mono text-white text-sm font-bold">∞</span>
+                    <div class="flex justify-between items-center bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Token B Reserve</span>
+                        <span class="mono text-indigo-300 text-xs blur-[3px] select-none transition hover:blur-none cursor-pointer" title="Ciphertext: 0x11c...4a2">*********</span>
                     </div>
                 </div>
-                <p class="text-[9px] text-slate-600 mt-3 italic text-center font-medium">撮合条件: 最高买价 ≥ 最低卖价</p>
+                <p class="text-[9px] text-slate-500 mt-3 text-center font-medium opacity-80"><i class="fas fa-shield-alt mr-1"></i> Hidden from MEV Bots</p>
             </div>
 
-            <!-- Input Form -->
-            <div class="glass-panel rounded-3xl p-8 space-y-6 shadow-2xl">
-                <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <i class="fas fa-file-signature text-indigo-500"></i> Place Shielded Order
+            <!-- Order Input Form -->
+            <div class="glass-panel rounded-3xl p-7 shadow-2xl relative">
+                <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2 mb-6">
+                    <i class="fas fa-terminal text-indigo-400"></i> Stealth Swap Intent
                 </h2>
                 
-                <div class="space-y-4">
+                <div class="space-y-5">
+                    <!-- Direction -->
                     <div>
-                        <label class="block text-[10px] text-slate-500 mb-2 uppercase font-black tracking-tighter">Trade Side</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button id="buySideBtn" class="py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs bg-indigo-500/10 text-indigo-400 border-indigo-500/50">BUY (BID)</button>
-                            <button id="sellSideBtn" class="py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs border-slate-800 text-slate-500 hover:border-slate-700">SELL (ASK)</button>
+                        <label class="block text-[10px] text-slate-400 mb-2 uppercase font-black tracking-widest">Direction</label>
+                        <div class="grid grid-cols-2 gap-3 p-1 bg-slate-900/50 rounded-xl border border-slate-800">
+                            <button id="buySideBtn" class="py-2.5 rounded-lg transition-all duration-300 font-bold text-xs bg-indigo-600 text-white shadow-md">USDC → SOL</button>
+                            <button id="sellSideBtn" class="py-2.5 rounded-lg transition-all duration-300 font-bold text-xs text-slate-400 hover:text-white">SOL → USDC</button>
                         </div>
                     </div>
                     
+                    <!-- Amount In -->
                     <div>
-                        <label class="block text-[10px] text-slate-500 mb-2 uppercase font-black tracking-tighter">Limit Price (SOL)</label>
-                        <input type="number" id="priceInput" value="150.00" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-4 text-lg focus:border-indigo-500 outline-none transition mono text-white">
+                        <label class="block text-[10px] text-slate-400 mb-2 uppercase font-black tracking-widest flex justify-between">
+                            <span>Amount In</span>
+                            <span class="text-slate-600">Balance: 1,000.00</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="volumeInput" value="100" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition mono text-white font-bold" data-original-type="number">
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+                                <span class="text-xs font-bold text-slate-500 uppercase" id="tokenInLabel">USDC</span>
+                            </div>
+                        </div>
                     </div>
 
+                    <!-- Min Amount Out (Slippage) -->
                     <div>
-                        <label class="block text-[10px] text-slate-500 mb-2 uppercase font-black tracking-tighter">Order Volume</label>
-                        <input type="number" id="volumeInput" value="10" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition mono text-white">
+                        <label class="block text-[10px] text-slate-400 mb-2 uppercase font-black tracking-widest flex justify-between">
+                            <span>Min Amount Out (Blind Limit)</span>
+                            <span class="text-indigo-400 flex items-center gap-1"><i class="fas fa-shield-blank"></i> Anti-Sandwich</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="priceInput" value="99.5" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition mono text-white font-bold" data-original-type="number">
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+                                <span class="text-xs font-bold text-slate-500 uppercase" id="tokenOutLabel">SOL</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <button id="submitBtn" class="w-full bg-white text-slate-950 font-black py-4 rounded-xl hover:bg-indigo-50 transition active:scale-[0.95] flex items-center justify-center gap-2 mt-2 shadow-xl disabled:opacity-50">
-                        <i class="fas fa-lock" id="btnIcon"></i> <span id="btnText">SUBMIT TO MXE</span>
-                    </button>
-                    
-                    <button id="resetStateBtn" onclick="resetOrderBook()" class="w-full text-[9px] text-slate-600 hover:text-slate-400 transition uppercase tracking-widest font-bold disabled:opacity-20">
-                        Reset Order Book State
+                    <button id="submitBtn" class="w-full bg-white text-slate-950 font-black py-4 rounded-xl hover:bg-slate-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-4 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                        <i class="fas fa-lock" id="btnIcon"></i> <span id="btnText">ENCRYPT & SUBMIT</span>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Right: Visualization Center -->
-        <div class="lg:col-span-8 space-y-6 flex flex-col">
-            <div id="mainDisplay" class="glass-panel rounded-3xl p-8 flex-1 flex flex-col relative overflow-hidden min-h-[500px] transition-all duration-500">
+        <!-- Right Column: Visualization & Terminal -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+            
+            <!-- MXE Visualizer -->
+            <div id="mainDisplay" class="glass-panel rounded-3xl p-8 flex-1 flex flex-col relative overflow-hidden min-h-[400px] transition-all duration-700 border-t-4 border-slate-800">
                 
-                <!-- Radar Background -->
-                <div id="radarContainer" class="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
-                    <div class="w-[400px] h-[400px] rounded-full border border-indigo-500/30 relative flex items-center justify-center">
+                <!-- Decorative Grid Background -->
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-50"></div>
+
+                <!-- Radar Background (Hidden during idle, active during computing) -->
+                <div id="radarContainer" class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-1000 pointer-events-none scale-90">
+                    <div class="w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] rounded-full border border-indigo-500/20 relative flex items-center justify-center">
                         <div class="w-3/4 h-3/4 rounded-full border border-indigo-500/20 flex items-center justify-center">
                             <div class="w-1/2 h-1/2 rounded-full border border-indigo-500/10"></div>
                         </div>
-                        <div class="scanner-line"></div>
+                        <div class="scanner-line hidden" id="scannerLine"></div>
                     </div>
                 </div>
 
-                <!-- Content Area: Idle -->
-                <div id="idleState" class="flex-1 flex flex-col items-center justify-center text-center space-y-4 z-10">
-                    <div class="w-20 h-20 bg-slate-900/50 rounded-full flex items-center justify-center mb-2 border border-slate-800 shadow-inner">
-                        <i class="fas fa-satellite-dish text-indigo-500 text-2xl"></i>
+                <!-- State: Idle -->
+                <div id="idleState" class="flex-1 flex flex-col items-center justify-center text-center space-y-5 z-10">
+                    <div class="w-24 h-24 bg-slate-900 rounded-full flex items-center justify-center border border-slate-700 shadow-inner shadow-black relative group cursor-pointer">
+                        <div class="absolute inset-0 rounded-full bg-indigo-500/20 blur-xl group-hover:bg-indigo-500/40 transition"></div>
+                        <i class="fas fa-cube text-slate-500 text-4xl group-hover:text-indigo-400 transition"></i>
                     </div>
-                    <h3 class="font-bold text-slate-300">暗盘实时监控中</h3>
-                    <div class="space-y-1">
-                        <p class="text-xs text-slate-600">Arcium 集群正在维护加密订单簿状态</p>
-                        <p class="text-[10px] text-indigo-400/60 font-mono uppercase tracking-widest">MPC Storage Active @ DEMPE...o9WSi</p>
-                    </div>
-                </div>
-
-                <!-- Content Area: Computing -->
-                <div id="computingState" class="hidden flex-1 flex flex-col items-center justify-center space-y-10 z-10 text-center">
-                    <div class="flex items-center gap-6 justify-center">
-                        <div class="w-16 h-16 bg-indigo-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-500/40 animate-pulse text-white text-3xl">
-                            <i class="fas fa-brain"></i>
-                        </div>
-                        <div class="flex flex-col items-center gap-1">
-                            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Comparing</span>
-                            <div class="h-[2px] w-32 bg-gradient-to-r from-indigo-500 via-white to-slate-800"></div>
-                            <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest mono text-nowrap">Secret Shares</span>
-                        </div>
-                        <div class="w-16 h-16 bg-slate-800 rounded-2xl border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-2xl">
-                            <i class="fas fa-shield-halved"></i>
-                        </div>
-                    </div>
-                    <div class="space-y-4">
-                        <h3 class="font-black text-indigo-400 uppercase tracking-[0.3em] text-sm animate-pulse">MXE 多方计算引擎处理中...</h3>
-                        <div class="bg-slate-950/80 px-8 py-3 rounded-full border border-slate-800 max-w-sm mx-auto shadow-inner">
-                            <p class="text-[10px] font-mono text-blue-300 tracking-wider" id="statusLog">Distributing Secret Shares...</p>
-                        </div>
+                    <div>
+                        <h3 class="font-black text-xl text-white tracking-tight">Arcium MXE Engine Idle</h3>
+                        <p class="text-sm text-slate-500 mt-2 max-w-xs mx-auto">Waiting for X25519 encrypted client payload to initiate secure computation.</p>
                     </div>
                 </div>
 
-                <!-- Content Area: Result -->
-                <div id="resultState" class="hidden flex-1 flex flex-col z-10 animate-in fade-in zoom-in duration-500">
-                    <div id="resultHeader" class="flex items-center gap-3 mb-8">
-                        <div id="resultIcon" class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg">
-                            <i class="fas fa-check-circle"></i>
+                <!-- State: Computing (MPC) -->
+                <div id="computingState" class="hidden flex-1 flex flex-col items-center justify-center space-y-8 z-10">
+                    <div class="flex items-center gap-4 sm:gap-8 justify-center relative">
+                        <!-- Simulated Ciphertexts -->
+                        <div class="flex flex-col gap-2 items-end opacity-70">
+                            <div class="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded text-[10px] mono text-green-400">0x7F2...A9C</div>
+                            <div class="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded text-[10px] mono text-green-400">0x3B1...4E2</div>
                         </div>
-                        <h3 id="resultTitle" class="text-xs font-black uppercase tracking-[0.2em]">--</h3>
+                        
+                        <div class="w-20 h-20 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(99,102,241,0.5)] animate-pulse text-white text-3xl z-10 border border-white/20">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        
+                        <div class="flex flex-col gap-2 items-start opacity-70">
+                            <div class="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded text-[10px] mono text-purple-400">0x99D...F11</div>
+                            <div class="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded text-[10px] mono text-purple-400">0x1C4...8B3</div>
+                        </div>
+
+                        <!-- Data flow lines -->
+                        <svg class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full -z-10" style="min-width: 300px;">
+                            <path d="M 50 50 L 120 50" stroke="rgba(74, 222, 128, 0.5)" stroke-width="2" stroke-dasharray="4" class="animate-[dash_1s_linear_infinite]"/>
+                            <path d="M 250 50 L 180 50" stroke="rgba(192, 132, 252, 0.5)" stroke-width="2" stroke-dasharray="4" class="animate-[dash_1s_linear_infinite_reverse]"/>
+                        </svg>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 shadow-xl">
-                            <p class="text-[10px] text-slate-500 mb-1 uppercase tracking-widest font-black">结算价格 (Final Price)</p>
-                            <p class="text-4xl font-black text-white mono" id="resPrice">--</p>
+                    <div class="text-center space-y-3">
+                        <h3 class="font-black text-indigo-400 uppercase tracking-[0.2em] text-sm flex items-center gap-2 justify-center">
+                            <i class="fas fa-circle-notch fa-spin"></i> Executing MPC Circuit
+                        </h3>
+                        <p class="text-[11px] font-mono text-slate-400 bg-slate-900/80 px-4 py-2 rounded-lg border border-slate-800" id="statusLog">
+                            Evaluating execute_swap.arcis...
+                        </p>
+                    </div>
+                </div>
+
+                <!-- State: Result -->
+                <div id="resultState" class="hidden flex-1 flex flex-col z-10 justify-center">
+                    <div class="bg-green-500/10 border border-green-500/30 rounded-2xl p-6 text-center max-w-md mx-auto w-full backdrop-blur-md">
+                        <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(34,197,94,0.4)] text-white text-2xl">
+                            <i class="fas fa-check"></i>
                         </div>
-                        <div class="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 shadow-xl">
-                            <p class="text-[10px] text-slate-500 mb-1 uppercase tracking-widest font-black">成交数量</p>
-                            <p class="text-4xl font-black text-white mono" id="resVol">--</p>
-                        </div>
-                        <div class="col-span-2 bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10 flex justify-between items-center">
-                            <div class="flex flex-col">
-                                <span class="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Atomic MPC Commitment</span>
-                                <span class="text-[10px] text-slate-600 mono mt-1">SIG: DEMPE...o9WSi | STATUS: MATCH_SUCCESS</span>
+                        <h3 class="text-lg font-black text-white mb-1">Stealth Execution Complete</h3>
+                        <p class="text-xs text-green-400 font-bold mb-6">Zero-Knowledge Proof Verified</p>
+                        
+                        <div class="bg-slate-950/80 rounded-xl p-4 text-left border border-slate-800">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] text-slate-500 uppercase font-bold">Settled Amount Out</span>
+                                <span class="text-sm font-black text-white mono" id="resVol">--</span>
                             </div>
-                            <i class="fas fa-file-signature text-slate-700 text-2xl"></i>
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-slate-500 uppercase font-bold">Encrypted State TX</span>
+                                <a href="#" class="text-[10px] text-indigo-400 mono hover:underline">5Wq9...mE2p <i class="fas fa-external-link-alt ml-1"></i></a>
+                            </div>
                         </div>
                     </div>
                     
-                    <button onclick="resetDemoUI()" class="mt-auto mx-auto text-[10px] text-slate-500 hover:text-white transition uppercase tracking-[0.4em] font-black border-b border-transparent hover:border-white pb-1">
-                        返回监控面板
+                    <button onclick="resetDemoUI()" class="mt-8 mx-auto text-xs text-slate-500 hover:text-white transition uppercase font-bold flex items-center gap-2">
+                        <i class="fas fa-redo"></i> Reset Demo
                     </button>
                 </div>
+            </div>
 
-                <!-- Bottom Logs Area -->
-                <div class="mt-8 pt-8 border-t border-slate-800/50">
-                    <div class="flex justify-between items-center mb-4 px-1">
-                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Network Telemetry</span>
-                        <span class="text-[9px] mono text-slate-600">Arcium Cluster: 456</span>
+            <!-- Terminal / Logs -->
+            <div class="glass-panel rounded-2xl p-4 flex-none border-l-4 border-slate-700 h-48 flex flex-col">
+                <div class="flex justify-between items-center mb-3 border-b border-slate-800 pb-2">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-terminal text-slate-500 text-xs"></i>
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Network Telemetry</span>
                     </div>
-                    <div id="liveLogs" class="space-y-2 h-24 overflow-y-auto custom-scrollbar mono text-[10px] px-1">
-                        <!-- Logs inject here -->
-                    </div>
+                    <span class="text-[9px] mono text-indigo-400/80 bg-indigo-500/10 px-2 py-0.5 rounded">arcium-cli v0.1.0</span>
+                </div>
+                <div id="liveLogs" class="flex-1 overflow-y-auto custom-scrollbar mono text-[11px] leading-relaxed space-y-1 pl-1">
+                    <!-- Logs inject here -->
                 </div>
             </div>
         </div>
     </main>
 
-    <footer class="mt-12 text-slate-700 text-[10px] uppercase tracking-[0.5em] font-black">
-        ArcDark Stateful Matching Protocol &copy; 2026
+    <footer class="mt-12 text-slate-600 text-[10px] uppercase tracking-[0.3em] font-bold flex items-center gap-2">
+        <i class="fas fa-shield-alt text-indigo-500/50"></i> Built for Arcium Hackathon
     </footer>
 
     <script>
-        // --- State Management ---
-        let currentSide = 'BUY';
-        let highestBid = 0.00;
-        let lowestAsk = Infinity;
+        // --- State ---
+        let currentSide = 'BUY'; // 'BUY' = USDC to SOL, 'SELL' = SOL to USDC
         let isProcessing = false;
 
-        // DOM Selectors
+        // --- DOM Elements ---
         const buySideBtn = document.getElementById('buySideBtn');
         const sellSideBtn = document.getElementById('sellSideBtn');
         const submitBtn = document.getElementById('submitBtn');
         const btnText = document.getElementById('btnText');
         const btnIcon = document.getElementById('btnIcon');
-        const resetStateBtn = document.getElementById('resetStateBtn');
         
         const priceInput = document.getElementById('priceInput');
         const volumeInput = document.getElementById('volumeInput');
-        
-        const stateBidDisp = document.getElementById('stateBid');
-        const stateAskDisp = document.getElementById('stateAsk');
+        const tokenInLabel = document.getElementById('tokenInLabel');
+        const tokenOutLabel = document.getElementById('tokenOutLabel');
         
         const mainDisplay = document.getElementById('mainDisplay');
         const idleState = document.getElementById('idleState');
         const computingState = document.getElementById('computingState');
         const resultState = document.getElementById('resultState');
+        const radarContainer = document.getElementById('radarContainer');
+        const scannerLine = document.getElementById('scannerLine');
         
         const statusLog = document.getElementById('statusLog');
         const liveLogs = document.getElementById('liveLogs');
-        const resPrice = document.getElementById('resPrice');
         const resVol = document.getElementById('resVol');
-        
-        const resultIcon = document.getElementById('resultIcon');
-        const resultTitle = document.getElementById('resultTitle');
 
-        // Side Toggle
+        // --- Init ---
+        addLiveLog("ArcDark Core initialized. Connecting to Cluster 456...");
+        setTimeout(() => addLiveLog("Connection established. Subscribing to MXE mempool...", "text-green-400"), 600);
+
+        // --- UI Interactions ---
         buySideBtn.addEventListener('click', () => {
             if (isProcessing) return;
             currentSide = 'BUY';
-            buySideBtn.className = "py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs bg-indigo-500/10 text-indigo-400 border-indigo-500/50";
-            sellSideBtn.className = "py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs border-slate-800 text-slate-500 hover:border-slate-700";
-            addLiveLog("Trade intent: BUY (Bid Maximization Mode)", "text-indigo-400");
+            buySideBtn.className = "py-2.5 rounded-lg transition-all duration-300 font-bold text-xs bg-indigo-600 text-white shadow-md";
+            sellSideBtn.className = "py-2.5 rounded-lg transition-all duration-300 font-bold text-xs text-slate-400 hover:text-white bg-transparent";
+            tokenInLabel.innerText = "USDC";
+            tokenOutLabel.innerText = "SOL";
         });
 
         sellSideBtn.addEventListener('click', () => {
             if (isProcessing) return;
             currentSide = 'SELL';
-            sellSideBtn.className = "py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs bg-red-500/10 text-red-400 border-red-500/50";
-            buySideBtn.className = "py-2.5 rounded-xl border transition-all duration-300 font-bold text-xs border-slate-800 text-slate-500 hover:border-slate-700";
-            addLiveLog("Trade intent: SELL (Ask Minimization Mode)", "text-red-400");
+            sellSideBtn.className = "py-2.5 rounded-lg transition-all duration-300 font-bold text-xs bg-purple-600 text-white shadow-md";
+            buySideBtn.className = "py-2.5 rounded-lg transition-all duration-300 font-bold text-xs text-slate-400 hover:text-white bg-transparent";
+            tokenInLabel.innerText = "SOL";
+            tokenOutLabel.innerText = "USDC";
         });
 
-        const logs = [
-            "Generating Secret Shares for order...",
-            "Submitting Shares to MXE nodes...",
-            "Syncing oblivious order book state...",
-            "Executing match_orders.match() circuit...",
-            "Evaluating if HighestBid >= LowestAsk...",
-            "Applying atomic threshold commitment...",
-            "Broadcasting final outcome to Solana ledger..."
-        ];
-
-        function addLiveLog(text, color = 'text-slate-500') {
-            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+        // --- Helpers ---
+        function addLiveLog(text, color = 'text-slate-400') {
+            const time = new Date().toISOString().substring(11,23); // HH:mm:ss.mmm
             const logEntry = document.createElement('div');
-            logEntry.className = `${color} border-l-2 border-transparent pl-2 hover:border-slate-700 transition-all`;
-            logEntry.innerHTML = `<span class="text-slate-700 mr-2">[${time}]</span> ${text}`;
-            liveLogs.prepend(logEntry);
+            logEntry.className = `${color}`;
+            logEntry.innerHTML = `<span class="text-slate-600 mr-2">[${time}]</span> ${text}`;
+            liveLogs.appendChild(logEntry);
+            liveLogs.scrollTop = liveLogs.scrollHeight;
         }
 
+        function generateRandomHex() {
+            const chars = '0123456789ABCDEF';
+            let hex = '0x';
+            for(let i=0; i<8; i++) hex += chars[Math.floor(Math.random() * 16)];
+            return hex;
+        }
+
+        function scrambleInput(inputEl) {
+            const originalVal = inputEl.value;
+            inputEl.classList.add('scramble-text');
+            
+            let interval = setInterval(() => {
+                inputEl.value = generateRandomHex();
+            }, 50);
+
+            setTimeout(() => {
+                clearInterval(interval);
+            }, 800);
+            
+            // We don't restore original value until reset, emphasizing encryption
+        }
+
+        // --- Execution Flow ---
         submitBtn.addEventListener('click', () => {
-            const userPrice = parseFloat(priceInput.value);
-            const userVol = parseFloat(volumeInput.value);
+            if (isProcessing || !priceInput.value || !volumeInput.value) return;
 
-            if (isNaN(userPrice) || userPrice <= 0 || isProcessing) return;
-
-            // --- LOCK ALL INPUTS ---
             isProcessing = true;
+            
+            // 1. Lock UI
             submitBtn.disabled = true;
-            resetStateBtn.disabled = true;
             buySideBtn.disabled = true;
             sellSideBtn.disabled = true;
             priceInput.disabled = true;
             volumeInput.disabled = true;
             
-            btnText.innerText = "MPC PROCESSING...";
-            btnIcon.className = "fas fa-spinner fa-spin";
+            btnText.innerText = "ENCRYPTING...";
+            btnIcon.className = "fas fa-shield-alt fa-spin text-green-400";
 
-            idleState.classList.add('hidden');
-            resultState.classList.add('hidden');
-            computingState.classList.remove('hidden');
-            mainDisplay.classList.remove('match-success-glow');
-
-            addLiveLog(`Initiating MPC Cycle: ${currentSide} ${userVol} units @ ${userPrice.toFixed(2)}`, 'text-indigo-400');
-
-            let logIndex = 0;
-            const logInterval = setInterval(() => {
-                statusLog.innerText = logs[logIndex];
-                addLiveLog(`[MXE] ${logs[logIndex]}`);
-                logIndex++;
-                if(logIndex >= logs.length) clearInterval(logInterval);
-            }, 600);
+            // 2. Client-side Encryption Simulation
+            addLiveLog("Generating ephemeral X25519 keypair...");
+            scrambleInput(priceInput);
+            scrambleInput(volumeInput);
 
             setTimeout(() => {
-                computingState.classList.add('hidden');
-                resultState.classList.remove('hidden');
+                addLiveLog(`Encrypting payload with RescueCipher. Ciphertext lengths: 32 bytes.`, "text-indigo-300");
+                btnText.innerText = "AWAITING MXE...";
+                btnIcon.className = "fas fa-satellite-dish animate-pulse";
                 
-                // --- CORE LOGIC: Update Stateful Order Book ---
-                if (currentSide === 'BUY') {
-                    if (userPrice > highestBid) highestBid = userPrice;
-                } else {
-                    if (userPrice < lowestAsk) lowestAsk = userPrice;
-                }
+                // Switch Display
+                idleState.classList.add('hidden');
+                computingState.classList.remove('hidden');
+                radarContainer.classList.remove('opacity-0');
+                radarContainer.classList.add('opacity-30', 'scale-100');
+                scannerLine.classList.remove('hidden');
 
-                stateBidDisp.innerText = highestBid.toFixed(2);
-                stateAskDisp.innerText = lowestAsk === Infinity ? "∞" : lowestAsk.toFixed(2);
+                // 3. MPC Processing Simulation
+                const mpcLogs = [
+                    "Instruction queued. Computation offset generated.",
+                    "Downloading execute_swap.arcis circuit definitions...",
+                    "Cluster nodes distributing secret shares...",
+                    "Evaluating Boolean logic: AmountIn >= MinAmountOut",
+                    "Applying constant-time state mutation (O(1) OTC Mode)...",
+                    "Aggregating encrypted output chunks...",
+                    "Broadcasting callback transaction to Solana network..."
+                ];
 
-                const isMatched = highestBid >= lowestAsk;
+                let logIndex = 0;
+                const mpcInterval = setInterval(() => {
+                    if(logIndex < mpcLogs.length) {
+                        statusLog.innerText = mpcLogs[logIndex];
+                        addLiveLog(`[MXE 456] ${mpcLogs[logIndex]}`);
+                        logIndex++;
+                    } else {
+                        clearInterval(mpcInterval);
+                        finalizeExecution();
+                    }
+                }, 700);
 
-                if (isMatched) {
-                    mainDisplay.classList.add('match-success-glow');
-                    resultIcon.className = "w-10 h-10 rounded-xl flex items-center justify-center bg-green-500 text-white shadow-xl shadow-green-500/30";
-                    resultTitle.innerText = "撮合成功: 订单已原子结算";
-                    resultTitle.className = "text-xs font-black uppercase tracking-[0.2em] text-green-400";
-                    
-                    resPrice.innerText = userPrice.toFixed(2);
-                    resVol.innerText = userVol;
-                    
-                    addLiveLog(`🎉 [ALERT] MATCH FOUND: ${highestBid.toFixed(2)} >= ${lowestAsk.toFixed(2)}. Settled.`, "text-green-500 font-black");
-                    
-                    highestBid = 0;
-                    lowestAsk = Infinity;
-                } else {
-                    resultIcon.className = "w-10 h-10 rounded-xl flex items-center justify-center bg-slate-800 text-slate-500 border border-slate-700";
-                    resultTitle.innerText = "未触发撮合: 状态已更新";
-                    resultTitle.className = "text-xs font-bold uppercase tracking-[0.2em] text-slate-400";
-                    
-                    resPrice.innerText = "QUEUED";
-                    resVol.innerText = "POOLED";
-                    
-                    addLiveLog("NOTICE: Price threshold not met. Encrypted state stored in MXE memory.", "text-amber-500/80");
-                }
-                
-                // --- UNLOCK AFTER DELAY ---
-                setTimeout(() => {
-                    isProcessing = false;
-                    submitBtn.disabled = false;
-                    resetStateBtn.disabled = false;
-                    buySideBtn.disabled = false;
-                    sellSideBtn.disabled = false;
-                    priceInput.disabled = false;
-                    volumeInput.disabled = false;
-                    btnText.innerText = "SUBMIT TO MXE";
-                    btnIcon.className = "fas fa-lock";
-                }, 500);
-
-            }, 4500);
+            }, 1000);
         });
 
-        function resetOrderBook() {
-            if (isProcessing) return;
-            highestBid = 0;
-            lowestAsk = Infinity;
-            stateBidDisp.innerText = "0.00";
-            stateAskDisp.innerText = "∞";
-            addLiveLog("CRITICAL: Order book state manually cleared by authority.", "text-red-400 font-bold");
+        function finalizeExecution() {
+            // Hide computing, show result
+            computingState.classList.add('hidden');
+            radarContainer.classList.add('opacity-0');
+            scannerLine.classList.add('hidden');
+            
+            resultState.classList.remove('hidden');
+            mainDisplay.classList.add('border-green-500/50', 'match-success-glow');
+
+            // Display success
+            resVol.innerText = `${volumeInput.dataset.originalType || '100.00'} ${tokenOutLabel.innerText}`;
+            
+            addLiveLog("awaitComputationFinalization: SUCCESS", "text-green-400 font-bold");
+            addLiveLog("Encrypted pool state successfully mutated without exposing execution price.");
+
+            btnText.innerText = "SECURE";
+            btnIcon.className = "fas fa-lock text-green-400";
         }
 
-        function resetDemoUI() {
+        window.resetDemoUI = function() {
+            isProcessing = false;
+            
+            // Restore Inputs
+            priceInput.value = "99.5";
+            volumeInput.value = "100";
+            priceInput.classList.remove('scramble-text');
+            volumeInput.classList.remove('scramble-text');
+            
+            priceInput.disabled = false;
+            volumeInput.disabled = false;
+            submitBtn.disabled = false;
+            buySideBtn.disabled = false;
+            sellSideBtn.disabled = false;
+
+            btnText.innerText = "ENCRYPT & SUBMIT";
+            btnIcon.className = "fas fa-lock";
+
+            // Restore Display
             resultState.classList.add('hidden');
             idleState.classList.remove('hidden');
-            mainDisplay.classList.remove('match-success-glow');
-            stateBidDisp.innerText = highestBid.toFixed(2);
-            stateAskDisp.innerText = lowestAsk === Infinity ? "∞" : lowestAsk.toFixed(2);
+            mainDisplay.classList.remove('border-green-500/50', 'match-success-glow');
+            mainDisplay.classList.add('border-slate-800');
+            
+            addLiveLog("Demo reset. Ready for next secure transaction.");
         }
-
-        addLiveLog("ArcDark MPC Matching Engine v1.2 Active.");
-        addLiveLog("Waiting for secret-shared input packets...");
     </script>
 </body>
 </html>
