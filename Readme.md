@@ -31,7 +31,7 @@ We engineered a 1:1 fixed-rate OTC execution model. This reduces computational o
 
 ### 🛠️ Architecture & Deployed Contracts
 
-- **Network:** Solana Devnet + Arcium Devnet Cluster (Offset: 456 v0.9.3)
+- **Network:** Solana Devnet + Arcium Devnet Cluster (Offset: 456 v0.9.2)
 - **Program ID:** `EQU8JCm5GYWZqJK2QXo8YFKR7m3MD9wkFAqd6VyCWTPH`
 - **Initialized Computation Circuits:**
    - `init_pool`: Securely provisions the blinded liquidity pool (`.arcis` circuit).
